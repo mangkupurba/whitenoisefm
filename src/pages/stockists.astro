@@ -1,0 +1,62 @@
+---
+import Base from '../layouts/Base.astro';
+import { STOCKISTS } from '../data/site';
+---
+
+<Base title="Stockists" label="Stockists">
+  <h2 class="section-label">[Stockists]</h2>
+  <ol class="list">
+    {
+      STOCKISTS.map((s, i) => (
+        <li class="item">
+          <span class="num">{String(i + 1).padStart(2, '0')}</span>
+          <div>
+            <h3 class="name caps">{s.name}</h3>
+            <address>{s.address}</address>
+            <a href={s.url} target="_blank" rel="noopener">
+              {s.url.replace(/^https?:\/\//, '')}
+            </a>
+          </div>
+        </li>
+      ))
+    }
+  </ol>
+</Base>
+
+<style>
+  .list {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+    max-width: 46rem;
+  }
+  .item {
+    display: grid;
+    grid-template-columns: 3rem 1fr;
+    gap: 1rem;
+    padding: 1.6rem 0;
+    border-top: 1px solid var(--line);
+  }
+  .item:last-child {
+    border-bottom: 1px solid var(--line);
+  }
+  .num {
+    font-family: var(--mono);
+    color: var(--yellow-text);
+    font-size: 0.85rem;
+  }
+  .name {
+    margin: 0 0 0.35rem;
+    font-size: var(--display-size);
+    font-weight: var(--display-weight);
+  }
+  address {
+    font-style: normal;
+    color: var(--ink-dim);
+    font-size: 0.88rem;
+    margin-bottom: 0.4rem;
+  }
+  a {
+    font-size: 0.88rem;
+  }
+</style>

@@ -1,0 +1,137 @@
+---
+import Base from '../layouts/Base.astro';
+import '@fontsource/stick-no-bills/200.css';
+import { ARCHIVE_LIVE } from '../data/site';
+import { ARCHIVE_GROUPS, getArchiveEntries, type ArchiveEntry } from '../lib/archive';
+
+// The archive stays "coming soon" until ARCHIVE_LIVE is switched on in src/data/site.ts.
+const entries: ArchiveEntry[] = ARCHIVE_LIVE ? await getArchiveEntries() : [];
+const groupLabel = (value: string) => ARCHIVE_GROUPS.find((g) => g.value === value)?.label ?? '';
+---
+
+<Base title="Archive" label="Archive">
+  {
+    ARCHIVE_LIVE && (
+  <nav class="groups" aria-label="Archive groupings">
+    {
+      ARCHIVE_GROUPS.map((g, i) => (
+        <>
+          {i > 0 && <span class="sep">|</span>}
+          <span class:list={['group', { off: !ARCHIVE_LIVE }]}>{g.label}</span>
+        </>
+      ))
+    }
+    <span class="sep">|</span>
+    <span class:list={['group', { off: !ARCHIVE_LIVE }]}>Year</span>
+  </nav>
+    )
+  }
+
+  {
+    ARCHIVE_LIVE ? (
+      <ul class="entries">
+        {entries.map((e) => (
+          <li class="entry bracket">
+            {e.coverUrl && <img src={`${e.coverUrl}?w=800&auto=format`} alt={e.coverAlt ?? e.title} loading="lazy" />}
+            <span class="meta caps">{groupLabel(e.category)} · {e.year}</span>
+            <span class="title">{e.title}</span>
+          </li>
+        ))}
+      </ul>
+    ) : (
+      <div class="soon">
+        <div class="soon-stack">
+          <img class="soon-figure" src="/coming-soon.webp" alt="" width="900" height="1890" loading="lazy" decoding="async" />
+          <p class="soon-title caps">Under construction</p>
+        </div>
+      </div>
+    )
+  }
+</Base>
+
+<style>
+  .groups {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.4rem 0.7rem;
+    font-size: 0.85rem;
+  }
+  .group.off {
+    color: var(--ink-dim);
+  }
+  .sep {
+    color: var(--yellow-text);
+  }
+  .soon {
+    padding-top: 1.2rem;
+    display: grid;
+    gap: 1rem;
+  }
+  /* The illustration fills the screen height; UNDER CONSTRUCTION runs across it, wider
+     than the drawing, so the two form a cross. */
+  .soon-stack {
+    --fig-h: max(20rem, calc(100svh - 23.8rem));
+    position: relative;
+    display: grid;
+    place-items: center;
+    justify-self: center;
+  }
+  .soon-figure {
+    display: block;
+    height: var(--fig-h);
+    width: auto;
+  }
+  .soon-title {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    margin: 0;
+    white-space: nowrap;
+    color: var(--ink);
+    font-weight: 200; /* Stick No Bills ExtraLight, for this title only */
+    /* Smaller type, wide cinematic tracking; the line still spans about 1.7x
+       the drawing's width, and never more than the screen */
+    font-size: min(calc(var(--fig-h) * 0.0586), calc((100vw - 2rem) / 14.3));
+    letter-spacing: 0.3em;
+    /* balance the space the tracking adds after the last letter */
+    padding-left: 0.3em;
+    line-height: 1;
+  }
+  @media (max-width: 820px) {
+    .soon-stack {
+      --fig-h: max(16rem, calc(100svh - 17.2rem));
+    }
+  }
+  .soon-note {
+    margin: 0;
+    justify-self: start;
+    text-align: left;
+    color: var(--ink-dim);
+    font-size: 0.85rem;
+  }
+  .entries {
+    list-style: none;
+    margin: 3rem 0 0;
+    padding: 0;
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(14rem, 1fr));
+    gap: 2.4rem 1.6rem;
+  }
+  .entry img {
+    display: block;
+    width: 100%;
+    aspect-ratio: 4 / 5;
+    object-fit: cover;
+    background: var(--grey-light);
+  }
+  .meta {
+    display: block;
+    margin-top: 0.6rem;
+    font-size: var(--display-size);
+    color: var(--yellow-text);
+  }
+  .title {
+    display: block;
+  }
+</style>

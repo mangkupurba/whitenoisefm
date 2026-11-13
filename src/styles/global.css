@@ -1,0 +1,159 @@
+/* WHITE NOISE FM: palette and base styles */
+:root {
+  /* base palette */
+  --white: #646758; /* content sheet (olive grey) */
+  --grey: #353338; /* page, band and rail (charcoal) */
+  --grey-light: #50503f; /* cards (olive) */
+  --tab: #554958; /* nav tabs (plum) */
+  --ink: #e7e4d8; /* text on the sheet */
+  --ink-dim: rgba(231, 228, 216, 0.62);
+  --label-ink: #1f1e22; /* dark text on yellow labels */
+  --on-grey: #e7e4d8;
+  --on-grey-dim: rgba(231, 228, 216, 0.62);
+  --line: rgba(231, 228, 216, 0.5);
+
+  /* accents */
+  --red: #b12b17;
+  --yellow: #b6b030;
+  /* brighter yellow for small text on the olive sheet */
+  --yellow-text: #ddd55a;
+
+  /* crosshair field, fixed to the viewport so it lines up across every region */
+  --plus-on-grey: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='96' height='96'%3E%3Cpath d='M48 45v7M44.5 48.5h7' stroke='rgba(231,228,216,0.5)' stroke-width='1' fill='none' shape-rendering='crispEdges'/%3E%3C/svg%3E");
+  --plus-on-white: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='96' height='96'%3E%3Cpath d='M48 45v7M44.5 48.5h7' stroke='rgba(231,228,216,0.42)' stroke-width='1' fill='none' shape-rendering='crispEdges'/%3E%3C/svg%3E");
+
+  --rail: 13rem;
+  /* Header illustration: drawn at full window width (never narrower than 1100px).
+     The band only holds its timeline line; the spine hangs over the layout below. */
+  --hdr-w: max(100vw, 1100px);
+  --band: calc(var(--hdr-w) * 0.072);
+  /* how far the drawing (spine and diamond) reaches below the top of the page */
+  --hdr-reach: calc(var(--hdr-w) * 0.118);
+  --font: 'Times New Roman', Times, serif;
+  --display: 'Stick No Bills', 'Times New Roman', Times, serif;
+  /* tracking for Stick No Bills: -10 in design-app units */
+  --display-tracking: -0.01em;
+  /* one size for all Stick No Bills text */
+  --display-size: 18px;
+  --display-weight: 300; /* Stick No Bills Light */
+  --mono: 'Courier New', Courier, monospace;
+}
+
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+}
+
+html,
+body {
+  margin: 0;
+  background-color: var(--grey);
+  background-image: var(--plus-on-grey);
+  background-position: 0 0;
+  color: var(--ink);
+  font-family: var(--font);
+  font-size: 14px;
+  line-height: 1;
+  -webkit-font-smoothing: antialiased;
+}
+
+@media (max-width: 820px) {
+  :root {
+    /* phones show the FM logo and the spine end of the line, drawn large; the
+       baseline sits just above the tabs and the wires hang over everything */
+    --hdr-w: 820px;
+  }
+}
+
+/* Light surfaces carry the darker crosshairs. Their pattern is offset by the
+   surface's own position so the crosshairs continue the page grid exactly. */
+.surface {
+  background-color: var(--white);
+  background-image: var(--plus-on-white);
+  background-position: var(--surface-x, 0) var(--surface-y, 0);
+}
+
+/* Grid on top: one crosshair layer over the whole page, photos included.
+   It ignores the mouse, so everything underneath stays clickable. */
+html.grid-top,
+html.grid-top body,
+html.grid-top .surface {
+  background-image: none;
+}
+html.grid-top .site::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  z-index: 20;
+  background-image: var(--plus-on-grey);
+  background-position: 0 0;
+  pointer-events: none;
+}
+
+a {
+  color: inherit;
+  text-underline-offset: 0.2em;
+  text-decoration-thickness: 1px;
+}
+a:hover {
+  color: var(--yellow-text);
+}
+a:focus-visible {
+  outline: 1px solid var(--yellow);
+  outline-offset: 3px;
+}
+
+::selection {
+  background: var(--yellow);
+  color: var(--label-ink);
+}
+
+/* Spaced capitals used for labels, tabs and the wordmark */
+.caps {
+  font-family: var(--display);
+  font-size: var(--display-size);
+  font-weight: var(--display-weight);
+  text-transform: uppercase;
+  letter-spacing: var(--display-tracking);
+}
+
+/* Corner bracket mark, borrowed from technical drawings */
+.bracket {
+  position: relative;
+}
+.bracket::before {
+  content: '';
+  position: absolute;
+  top: -0.45rem;
+  left: -0.45rem;
+  width: 1.15rem;
+  height: 1.15rem;
+  border-top: 1px solid var(--yellow);
+  border-left: 1px solid var(--yellow);
+  pointer-events: none;
+}
+
+/* Section heading as a yellow index tab: [ABOUT] */
+.section-label {
+  display: inline-block;
+  margin: 0 0 1.3rem;
+  padding: 0.15rem 0.6rem 0.1rem;
+  background: var(--yellow);
+  color: var(--label-ink);
+  font-family: var(--display);
+  font-size: var(--display-size);
+  font-weight: var(--display-weight);
+  text-transform: uppercase;
+  letter-spacing: var(--display-tracking);
+}
+
+/* Text for screen readers and search engines only */
+.sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
+}

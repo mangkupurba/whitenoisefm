@@ -1,0 +1,378 @@
+---
+import '@fontsource/stick-no-bills/300.css';
+import '../styles/global.css';
+import Footer from '../components/Footer.astro';
+import { NAV, GRID_ON_TOP } from '../data/site';
+
+interface Props {
+  title?: string;
+  label?: string;
+  noindex?: boolean;
+  drafting?: boolean;
+  flush?: boolean;
+}
+
+const { title, label, noindex = false, drafting = false, flush = false } = Astro.props;
+const pageTitle = title ? `${title} · WHITE NOISE FM` : 'WHITE NOISE FM';
+const description =
+  'WHITE NOISE FM is a design practice founded by Dekza Arlingga in 2020. Clothes, collections, objects, stories and installations.';
+// Absolute addresses for link previews. The host sets the site address at build
+// time (see astro.config.mjs); without one, previews fall back to relative paths.
+const site = Astro.site;
+const shareImage = site ? new URL('/og-image.jpg', site).href : '/og-image.jpg';
+const pageUrl = site ? new URL(Astro.url.pathname, site).href : undefined;
+const path = Astro.url.pathname.replace(/\/$/, '') || '/';
+---
+
+<html lang="en" class:list={{ 'grid-top': GRID_ON_TOP }}>
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
+    <link rel="icon" href="/favicon.ico" sizes="48x48" />
+    <link rel="apple-touch-icon" href="/apple-touch-icon.png" />
+    <meta name="theme-color" content="#353338" />
+    <meta name="description" content={description} />
+    {noindex && <meta name="robots" content="noindex, nofollow" />}
+    <title>{pageTitle}</title>
+    <!-- link previews (WhatsApp, Instagram, iMessage, X) -->
+    <meta property="og:type" content="website" />
+    <meta property="og:site_name" content="WHITE NOISE FM" />
+    <meta property="og:title" content={pageTitle} />
+    <meta property="og:description" content={description} />
+    <meta property="og:image" content={shareImage} />
+    <meta property="og:image:width" content="1200" />
+    <meta property="og:image:height" content="630" />
+    {pageUrl && <meta property="og:url" content={pageUrl} />}
+    {pageUrl && <link rel="canonical" href={pageUrl} />}
+    <meta name="twitter:card" content="summary_large_image" />
+    <!-- start loading the header artwork straight away -->
+    <link rel="preload" as="image" href="/header-illustration.webp" />
+  </head>
+  <body>
+    <div class="site">
+      <header class="band">
+        <div class="masthead" aria-hidden="true">
+          <img src="/header-illustration.webp" alt="" width="3600" height="864" />
+        </div>
+        <a class="brand-logo" href="/" aria-label="White Noise FM, home"></a>
+        {label && <span class="page-label caps">[{label}]</span>}
+      </header>
+
+
+      <nav class="rail" aria-label="Main">
+        {
+          NAV.map((item) => {
+            const active = !item.external && path === item.href;
+            return (
+              <a
+                class:list={['tab', 'caps', { active }]}
+                href={item.href}
+                aria-current={active ? 'page' : undefined}
+                {...(item.external ? { target: '_blank', rel: 'noopener' } : {})}
+              >
+                <span class="tab-box">
+                  {item.label}
+                  {active && <span class="hex" aria-hidden="true" />}
+                </span>
+              </a>
+            );
+          })
+        }
+        <img class="stamp" src="/about-stamp.svg" alt="" width="108" height="648" loading="lazy" aria-hidden="true" />
+      </nav>
+
+      <div class="sheet surface">
+        <main class:list={['panel', { flush }]}>
+          {title && <h1 class="sr-only">{title}</h1>}
+          <slot />
+        </main>
+        <Footer />
+      </div>
+    </div>
+  </body>
+</html>
+
+<style>
+  .site {
+    position: relative;
+    min-height: 100vh;
+    min-height: 100svh;
+    display: grid;
+    grid-template-columns: var(--rail) 1fr;
+    grid-template-rows: var(--band) 1fr;
+    grid-template-areas:
+      'band  band'
+      'rail  sheet';
+  }
+
+  /* White sheet holding the content and the footer */
+  .sheet {
+    grid-area: sheet;
+    display: flex;
+    flex-direction: column;
+    min-width: 0;
+    --surface-x: calc(var(--rail) * -1);
+    --surface-y: calc(var(--band) * -1);
+  }
+
+  .band {
+    grid-area: band;
+    position: relative;
+    height: var(--band);
+    color: var(--on-grey);
+  }
+  /* The header illustration: the timeline runs along the band and the spine and
+     its cables hang down past it, behind the tabs (which sit above it). The
+     drawing is clipped at the window's right edge but free to hang downward. */
+  .masthead {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    overflow-x: clip;
+    pointer-events: none;
+    z-index: 15;
+  }
+  .masthead img {
+    display: block;
+    width: var(--hdr-w);
+    max-width: none;
+    height: auto;
+  }
+  /* Click area over the FM mark, which is the site logo */
+  .brand-logo {
+    position: absolute;
+    top: calc(var(--hdr-w) * 0.003);
+    left: 0;
+    width: calc(var(--hdr-w) * 0.062);
+    height: calc(var(--hdr-w) * 0.062);
+    border-radius: 50%;
+    z-index: 26;
+  }
+  .page-label {
+    position: absolute;
+    top: 0.7rem;
+    right: 0.7rem;
+    font-size: var(--display-size);
+    color: var(--on-grey-dim);
+    z-index: 26;
+  }
+
+  /* Vertical drafting line dropping from the band into the panel */
+  .rule-v {
+    position: absolute;
+    top: calc(var(--band) * 0.32);
+    left: 62%;
+    width: 1px;
+    height: calc(var(--band) * 0.68);
+    background: var(--ink);
+    opacity: 0.5;
+    z-index: 2;
+    pointer-events: none;
+  }
+  .rule-v::before {
+    top: 0;
+    left: 0;
+    width: 2.2rem;
+    border-left: none;
+  }
+
+  /* Index tabs on a branching line: one yellow spine runs down the left with a
+     tick at the top, and each tab below the first joins it on a diagonal into
+     the box's top-left corner. A red hexagon marks the current page.
+     Every part is sized from --h, the height of a box. */
+  .rail {
+    --h: 2.05rem;
+    --gap: calc(var(--h) * 0.36);
+    --line: 1.25px;
+    grid-area: rail;
+    display: flex;
+    flex-direction: column;
+    position: relative;
+    gap: var(--gap);
+    padding: 3rem 0 3rem 0.7rem;
+    z-index: 25; /* above the crosshair grid overlay (z-index 20) */
+  }
+  .tab {
+    position: relative;
+    display: block;
+    padding-left: calc(var(--h) * 0.71);
+    color: var(--on-grey);
+    text-decoration: none;
+  }
+  /* spine: runs from this tab's top down to the next tab's top */
+  .tab::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: var(--line);
+    height: calc(var(--h) + var(--gap));
+    background: var(--yellow);
+  }
+  /* the last segment stops where the last diagonal begins */
+  .tab:last-child::before {
+    height: calc(var(--h) * 0.5);
+  }
+  /* tick at the top of the spine */
+  .tab:first-child::after {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: calc(var(--h) * 0.48);
+    height: var(--line);
+    background: var(--yellow);
+  }
+  /* diagonal from the spine up and out, stopping where the top tick ends so it
+     never touches the boxes */
+  .tab + .tab::after {
+    content: '';
+    position: absolute;
+    top: calc(var(--h) * 0.5);
+    left: 0;
+    width: calc(var(--h) * 0.588);
+    height: var(--line);
+    background: var(--yellow);
+    transform: rotate(-35.2deg);
+    transform-origin: 0 50%;
+  }
+  /* current page: a red hex, like a wrench opening, at the right end of its box */
+  .hex {
+    position: absolute;
+    top: 50%;
+    right: 0.6rem; /* same inset as the label on the left */
+    transform: translateY(-50%);
+    width: calc(var(--h) * 0.46);
+    height: calc(var(--h) * 0.4);
+    background: var(--red);
+    clip-path: polygon(25% 0, 75% 0, 100% 50%, 75% 100%, 25% 100%, 0 50%);
+  }
+  .tab-box {
+    position: relative;
+    display: flex;
+    align-items: center;
+    height: var(--h);
+    margin-right: -0.7rem;
+    padding: 0.1rem 0.6rem 0;
+    background: var(--tab);
+    font-size: var(--display-size);
+    font-weight: var(--display-weight);
+    transition: color 0.15s ease;
+  }
+  /* The About text set as a vertical stamp, under the tabs */
+  /* Floats under the last tab without stretching the page; on short pages it
+     scales down to fit the column. */
+  .stamp {
+    position: absolute;
+    top: calc(3rem + 4 * var(--h) + 3 * var(--gap) + 1.6rem);
+    left: 0.7rem;
+    width: auto;
+    height: auto;
+    max-width: calc(var(--hdr-w) * 0.0646);
+    max-height: calc(100% - (3rem + 4 * var(--h) + 3 * var(--gap) + 3.2rem));
+    pointer-events: none;
+  }
+  .tab:hover .tab-box {
+    color: var(--yellow);
+  }
+  .rail .bracket::before,
+  .band .bracket::before {
+    border-color: var(--yellow);
+  }
+
+  .panel {
+    flex: 1;
+    position: relative;
+    min-width: 0;
+    /* text pages start below the hanging spine; image pages let it overlap */
+    padding: calc(var(--hdr-reach) - var(--band) + 1rem) 0.7rem 2.4rem 1.4rem;
+    min-height: 28rem;
+  }
+  /* Edge-to-edge panel for image-led pages */
+  .panel.flush {
+    padding: 0.7rem 0 0.4rem 0.7rem;
+    display: flex;
+    flex-direction: column;
+  }
+
+  @media (max-width: 820px) {
+    .site {
+      grid-template-columns: 1fr;
+      grid-template-rows: auto auto 1fr;
+      grid-template-areas: 'band' 'rail' 'sheet';
+    }
+    .sheet {
+      --surface-x: 0;
+      --surface-y: 0;
+    }
+    .rule-v {
+      display: none;
+    }
+    /* On phones the tabs sit in one row, each with its own bracket: a tick, a
+       short drop and a diagonal closing back up toward the box. The row scrolls
+       sideways if it is wider than the screen. */
+    .rail {
+      --h: 1.35rem;
+      --drop: 1.6;
+      flex-direction: row;
+      gap: 0.4rem;
+      overflow-x: auto;
+      padding: 0.2rem 0 0.3rem 0.7rem;
+      scrollbar-width: none;
+    }
+    .rail::-webkit-scrollbar {
+      display: none;
+    }
+    .tab {
+      flex: none;
+      height: calc(var(--h) * var(--drop) + 0.2rem);
+      padding-left: calc(var(--h) * 0.6);
+    }
+    .tab::before,
+    .tab:last-child::before {
+      width: calc(var(--h) * 0.32);
+      height: calc(var(--h) * var(--drop));
+      background: none;
+      border-top: var(--line) solid var(--yellow);
+      border-left: var(--line) solid var(--yellow);
+    }
+    .tab::after,
+    .tab:first-child::after,
+    .tab + .tab::after {
+      content: '';
+      position: absolute;
+      top: calc(var(--h) * var(--drop));
+      left: 0;
+      width: calc(var(--h) * 0.92);
+      height: var(--line);
+      background: var(--yellow);
+      transform: rotate(-36deg);
+      transform-origin: 0 50%;
+    }
+    .hex {
+      right: calc(var(--h) * 0.2);
+    }
+    .tab.active .tab-box {
+      padding-right: calc(var(--h) * 0.75);
+    }
+    .tab-box {
+      margin-right: 0;
+      padding: 0.1rem 0.3rem 0;
+      font-size: 15px;
+    }
+    .stamp {
+      display: none;
+    }
+    .panel {
+      padding: 1.4rem 0.7rem 2.4rem;
+      min-height: 0;
+    }
+    .panel.flush {
+      padding: 0.7rem 0 0.7rem 0.7rem;
+      display: flex;
+      flex-direction: column;
+    }
+  }
+</style>

@@ -1,0 +1,114 @@
+---
+// Unlisted page: not in the navigation and hidden from search engines.
+import Base from '../layouts/Base.astro';
+import { TEAM } from '../data/site';
+---
+
+<Base title="Info" label="Info" noindex>
+  <h2 class="section-label">[Info]</h2>
+  <div class="team">
+    {
+      TEAM.map((p) => (
+        <section class="member">
+          <div class="card">
+          <h3 class="name caps">{p.name}</h3>
+          <p class="role">{p.role}</p>
+          <dl>
+            <div>
+              <dt>WhatsApp</dt>
+              <dd>
+                <a href={p.whatsapp} target="_blank" rel="noopener">
+                  Message
+                </a>
+              </dd>
+            </div>
+            <div>
+              <dt>Instagram</dt>
+              <dd>
+                <a href={p.instagram} target="_blank" rel="noopener">
+                  @{p.handle}
+                </a>
+              </dd>
+            </div>
+            <div>
+              <dt>Email</dt>
+              <dd>
+                <a href={`mailto:${p.email}`}>{p.email}</a>
+              </dd>
+            </div>
+          </dl>
+          </div>
+        </section>
+      ))
+    }
+  </div>
+</Base>
+
+<style>
+  .team {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(17rem, 22rem));
+    gap: 2.4rem;
+  }
+  /* Each card hangs off the same bracket as the nav tabs: a tick level with the
+     card's top, a drop down the left, and a diagonal closing back toward it. */
+  .member {
+    --line: 1.25px;
+    position: relative;
+    padding-left: 1.6rem;
+  }
+  .member::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 0.7rem;
+    height: 2.4rem;
+    border-top: var(--line) solid var(--yellow);
+    border-left: var(--line) solid var(--yellow);
+    pointer-events: none;
+  }
+  .member::after {
+    content: '';
+    position: absolute;
+    top: 2.4rem;
+    left: 0;
+    width: 1.2rem;
+    height: var(--line);
+    background: var(--yellow);
+    transform: rotate(-36deg);
+    transform-origin: 0 50%;
+    pointer-events: none;
+  }
+  .card {
+    background: var(--grey-light);
+    padding: 0.8rem 1.1rem 0.85rem;
+  }
+  .name {
+    margin: 0;
+    font-size: var(--display-size);
+    font-weight: var(--display-weight);
+    color: var(--ink);
+  }
+  .role {
+    margin: 0.1rem 0 0.6rem;
+    font-size: 1rem;
+    color: var(--yellow-text);
+  }
+  dl {
+    margin: 0;
+    display: grid;
+    gap: 0.1rem;
+    font-size: 0.86rem;
+  }
+  dl div {
+    display: grid;
+    grid-template-columns: 5.6rem 1fr;
+  }
+  dt {
+    color: var(--ink-dim);
+  }
+  dd {
+    margin: 0;
+  }
+</style>

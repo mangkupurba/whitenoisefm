@@ -1,43 +1,23 @@
-# Astro Starter Kit: Minimal
+# WHITE NOISE FM — website
 
-```sh
-npm create astro@latest -- --template minimal
-```
+Astro site with a Sanity-backed archive (switched off for now).
 
-> 🧑‍🚀 **Seasoned astronaut?** Delete this file. Have fun!
+## Everyday commands
 
-## 🚀 Project Structure
+    npm run dev      # preview at http://localhost:4321 (add `-- --host` to open it on your phone)
+    npm run build    # builds the finished site into dist/
 
-Inside of your Astro project, you'll see the following folders and files:
+## Where things live
 
-```text
-/
-├── public/
-├── src/
-│   └── pages/
-│       └── index.astro
-└── package.json
-```
+- `images/` — homepage photos, one folder per collection. The file name is the caption.
+- `src/data/site.ts` — text and settings: homepage folder order, shop link, stockists, team (Info page), `ARCHIVE_LIVE`, `GRID_ON_TOP`.
+- `public/` — header illustration, About stamp, watermark, Archive illustration, favicons and the link-preview image (`og-image.jpg`).
+- `src/pages/` — one file per page. `info` is unlisted: no menu link and hidden from search.
 
-Astro looks for `.astro` or `.md` files in the `src/pages/` directory. Each page is exposed as a route based on its file name.
+## Going live
 
-There's nothing special about `src/components/`, but that's where we like to put any Astro/React/Vue/Svelte/Preact components.
+The host needs these settings (also in `.env`, which is not uploaded):
 
-Any static assets, like images, can be placed in the `public/` directory.
-
-## 🧞 Commands
-
-All commands are run from the root of the project, from a terminal:
-
-| Command                   | Action                                           |
-| :------------------------ | :----------------------------------------------- |
-| `npm install`             | Installs dependencies                            |
-| `npm run dev`             | Starts local dev server at `localhost:4321`      |
-| `npm run build`           | Build your production site to `./dist/`          |
-| `npm run preview`         | Preview your build locally, before deploying     |
-| `npm run astro ...`       | Run CLI commands like `astro add`, `astro check` |
-| `npm run astro -- --help` | Get help using the Astro CLI                     |
-
-## 👀 Want to learn more?
-
-Feel free to check [our documentation](https://docs.astro.build) or jump into our [Discord server](https://astro.build/chat).
+    PUBLIC_SANITY_PROJECT_ID=d9id18ww
+    PUBLIC_SANITY_DATASET=production
+    SITE_URL=https://your-domain   # for link previews; Netlify sets this automatically

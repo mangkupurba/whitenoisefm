@@ -1,0 +1,434 @@
+---
+// Horizontal strip of image boxes for the homepage. Photos come from images/ at the
+// project root. Each folder is split into one box per image shape, so a box never
+// crops a photo into different proportions. Boxes cycle on a timer and on click,
+// with the file name as caption. The signal drawing sits on top of the strip.
+import { getImage } from 'astro:assets';
+import type { ImageMetadata } from 'astro';
+import { HOME_FOLDERS, HOME_INTERVAL } from '../data/site';
+
+const files = import.meta.glob<{ default: ImageMetadata }>(
+  '../../images/**/*.{jpg,jpeg,png,webp,avif,gif,JPG,JPEG,PNG,WEBP}',
+  { eager: true },
+);
+
+const TYPE: Record<string, string> = {
+  jpg: 'Jpeg',
+  jpeg: 'Jpeg',
+  png: 'Png',
+  webp: 'Webp',
+  avif: 'Avif',
+  gif: 'Gif',
+};
+const pad = (n: number) => String(n).padStart(2, '0');
+const byName = (a: string, b: string) => a.localeCompare(b, undefined, { numeric: true });
+
+type Slide = {
+  src: string;
+  srcset: string;
+  width: number;
+  height: number;
+  name: string;
+  dims: string;
+  type: string;
+};
+
+// Group files by folder
+const folders = new Map<string, [string, ImageMetadata][]>();
+for (const [path, mod] of Object.entries(files)) {
+  const rel = path.split('/images/').pop() ?? path;
+  const folder = rel.split('/').slice(0, -1).join('/');
+  if (!folders.has(folder)) folders.set(folder, []);
+  folders.get(folder)!.push([rel, mod.default]);
+}
+const folderOrder = [
+  ...HOME_FOLDERS.filter((f) => folders.has(f)),
+  ...[...folders.keys()].filter((f) => !HOME_FOLDERS.includes(f)).sort(byName),
+];
+
+const boxes: { dir: string; ratio: number; slides: Slide[] }[] = [];
+for (const folder of folderOrder) {
+  const entries = folders.get(folder)!.sort(([a], [b]) => byName(a, b));
+
+  // Split the folder by proportion (within 3%)
+  const groups: { ratio: number; items: [string, ImageMetadata][] }[] = [];
+  for (const entry of entries) {
+    const r = entry[1].width / entry[1].height;
+    const group = groups.find((g) => Math.abs(g.ratio - r) / g.ratio < 0.03);
+    if (group) group.items.push(entry);
+    else groups.push({ ratio: r, items: [entry] });
+  }
+  // portrait boxes first, then the wider ones
+  groups.sort((a, b) => a.ratio - b.ratio);
+
+  for (const group of groups) {
+    const slides = await Promise.all(
+      group.items.map(async ([rel, meta]): Promise<Slide> => {
+        const name = rel.split('/').pop() ?? rel;
+        const ext = name.split('.').pop()?.toLowerCase() ?? '';
+        const img = await getImage({
+          src: meta,
+          widths: [...[640, 1200].filter((w) => w < meta.width), Math.min(meta.width, 1800)],
+          width: Math.min(meta.width, 1800),
+          format: 'webp',
+        });
+        return {
+          src: img.src,
+          srcset: img.srcSet.attribute,
+          width: meta.width,
+          height: meta.height,
+          name,
+          dims: `${meta.width}x${meta.height}`,
+          type: `${TYPE[ext] ?? ext.toUpperCase()} image`,
+        };
+      }),
+    );
+    boxes.push({ dir: folder ? `${folder}/` : '', ratio: group.ratio, slides });
+  }
+}
+
+// Alternate large and small boxes along the strip
+const strip = boxes.map((box, i) => ({
+  ...box,
+  size: i % 2 === 0 ? 'large' : 'small',
+  ar: `${box.slides[0].width} / ${box.slides[0].height}`,
+}));
+---
+
+<div class="strip" data-strip data-interval={HOME_INTERVAL}>
+  <div class="track" data-track>
+    {
+      // The set is drawn three times and the page opens on the middle one; when
+      // the scroll drifts into either copy it is moved back by one set, so the
+      // strip loops endlessly in both directions.
+      [...strip, ...strip, ...strip].map((box, i) => (
+        <figure
+          class:list={['box', box.size]}
+          style={`--ar: ${box.ar}`}
+          data-box
+          data-clone={i < strip.length || i >= strip.length * 2 ? '' : undefined}
+          aria-hidden={i < strip.length || i >= strip.length * 2 ? 'true' : undefined}
+        >
+          <button
+            class="frame"
+            tabindex={i < strip.length || i >= strip.length * 2 ? -1 : undefined}
+            type="button"
+            aria-label={`Next image, 1 of ${box.slides.length}`}
+            disabled={box.slides.length < 2}
+            data-next
+          >
+            {box.slides.map((s, j) => (
+              <img
+                class:list={{ on: j === 0 }}
+                src={j === 0 ? s.src : undefined}
+                srcset={j === 0 ? s.srcset : undefined}
+                data-src={j === 0 ? undefined : s.src}
+                data-srcset={j === 0 ? undefined : s.srcset}
+                sizes={box.size === 'large' ? '(max-width: 820px) 90vw, 60vw' : '(max-width: 820px) 70vw, 30vw'}
+                width={s.width}
+                height={s.height}
+                alt=""
+                loading={i < 2 ? 'eager' : 'lazy'}
+                decoding="async"
+                data-name={s.name}
+                data-dims={s.dims}
+                data-type={s.type}
+              />
+            ))}
+          </button>
+          <figcaption class="cap">
+            <span class="path">
+              <span class="name" data-cap-name>
+                {box.slides[0].name}
+              </span>
+            </span>
+            <span class="type" data-cap-type>
+              {box.slides[0].type}
+            </span>
+            {box.slides.length > 1 && (
+              <span class="count" data-cap-count>
+                {pad(1)}/{pad(box.slides.length)}
+              </span>
+            )}
+          </figcaption>
+        </figure>
+      ))
+    }
+  </div>
+
+  <div class="overlay" aria-hidden="true">
+    <img src="/watermark.webp" alt="" width="1043" height="267" decoding="async" />
+  </div>
+</div>
+
+<script>
+  const pad = (n: number) => String(n).padStart(2, '0');
+  const reduceMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+
+  document.querySelectorAll<HTMLElement>('[data-strip]').forEach((strip) => {
+    const interval = Number(strip.dataset.interval || 4) * 1000;
+    const track = strip.querySelector<HTMLElement>('[data-track]');
+    const boxes = Array.from(strip.querySelectorAll<HTMLElement>('[data-box]'));
+
+    const controls = boxes.map((box, index) => {
+      const imgs = Array.from(box.querySelectorAll<HTMLImageElement>('img'));
+      const button = box.querySelector<HTMLButtonElement>('[data-next]');
+      const name = box.querySelector<HTMLElement>('[data-cap-name]');
+      const dims = box.querySelector<HTMLElement>('[data-cap-dims]');
+      const type = box.querySelector<HTMLElement>('[data-cap-type]');
+      const count = box.querySelector<HTMLElement>('[data-cap-count]');
+      let current = 0;
+      let timer: number | undefined;
+      let visible = false;
+
+      // Images after the first only load when they are next in line.
+      const load = (k: number) => {
+        const img = imgs[k % imgs.length];
+        if (!img?.dataset.srcset) return;
+        img.srcset = img.dataset.srcset;
+        img.src = img.dataset.src ?? '';
+        delete img.dataset.srcset;
+        delete img.dataset.src;
+      };
+
+      const show = (n: number) => {
+        current = (n + imgs.length) % imgs.length;
+        const target = current;
+        const img = imgs[target];
+        load(target);
+        load(target + 1);
+        // Keep the previous image up until the new one has arrived.
+        const swap = () => {
+          if (current !== target) return;
+          imgs.forEach((el) => el.classList.toggle('on', el === img));
+          if (name) name.textContent = img.dataset.name ?? '';
+          if (dims) dims.textContent = img.dataset.dims ?? '';
+          if (type) type.textContent = img.dataset.type ?? '';
+          if (count) count.textContent = `${pad(target + 1)}/${pad(imgs.length)}`;
+          button?.setAttribute('aria-label', `Next image, ${target + 1} of ${imgs.length}`);
+        };
+        if (img.complete && img.naturalWidth) swap();
+        else img.addEventListener('load', swap, { once: true });
+      };
+
+      const stop = () => {
+        window.clearTimeout(timer);
+        timer = undefined;
+      };
+      // Boxes are staggered so they never all change on the same beat.
+      const start = (delay = interval) => {
+        stop();
+        if (reduceMotion || imgs.length < 2 || !visible || document.hidden) return;
+        timer = window.setTimeout(() => {
+          show(current + 1);
+          start();
+        }, delay);
+      };
+
+      button?.addEventListener('click', () => {
+        show(current + 1);
+        start();
+      });
+
+      return {
+        box,
+        setVisible(v: boolean) {
+          visible = v;
+          if (v) load(current + 1);
+          if (v) start(interval + (index * interval) / Math.max(boxes.length, 1));
+          else stop();
+        },
+        resume: () => start(),
+        stop,
+      };
+    });
+
+    // Only run the timers for boxes that are on screen.
+    const io = new IntersectionObserver(
+      (entries) =>
+        entries.forEach((e) => controls.find((c) => c.box === e.target)?.setVisible(e.isIntersecting)),
+      { threshold: 0.2 },
+    );
+    controls.forEach((c) => io.observe(c.box));
+
+    document.addEventListener('visibilitychange', () =>
+      controls.forEach((c) => (document.hidden ? c.stop() : c.resume())),
+    );
+
+    // Endless loop in both directions: the track holds three copies of the set
+    // and starts on the middle one. Whenever the scroll drifts into the first or
+    // last copy it is moved by exactly one set, which looks identical.
+    const n = boxes.length / 3;
+    const setWidth = () => (n >= 1 ? boxes[n].offsetLeft - boxes[0].offsetLeft : 0);
+    const recentre = () => {
+      const w = setWidth();
+      if (!track || w <= 0) return;
+      if (track.scrollLeft < w * 0.5) track.scrollLeft += w;
+      else if (track.scrollLeft >= w * 1.5) track.scrollLeft -= w;
+    };
+    requestAnimationFrame(() => {
+      const w = setWidth();
+      if (track && w > 0) track.scrollLeft = w;
+    });
+    track?.addEventListener('scroll', recentre, { passive: true });
+
+    // A vertical mouse wheel scrolls the strip sideways.
+    track?.addEventListener(
+      'wheel',
+      (e) => {
+        if (Math.abs(e.deltaY) <= Math.abs(e.deltaX)) return;
+        if (track.scrollWidth <= track.clientWidth) return;
+        e.preventDefault();
+        track.scrollLeft += e.deltaY;
+      },
+      { passive: false },
+    );
+  });
+</script>
+
+<style>
+  /* The strip fills all the height between the header and the footer line */
+  .strip {
+    --cap: 2.6rem; /* large boxes: room for a two-line caption */
+    --h: calc(100cqh - 0.5rem);
+    position: relative;
+    flex: 1;
+    min-height: 24rem;
+    container-type: size;
+  }
+
+  .track {
+    display: flex;
+    align-items: flex-start;
+    gap: 2.4rem;
+    overflow-x: auto;
+    overscroll-behavior-x: contain;
+    height: 100%;
+    padding: 0 0.7rem 0.5rem 0;
+    scrollbar-width: thin;
+    scrollbar-color: var(--line) transparent;
+  }
+
+  .box {
+    flex: none;
+    width: min-content;
+    margin: 0;
+  }
+
+  .frame {
+    position: relative;
+    display: block;
+    aspect-ratio: var(--ar);
+    height: calc(var(--h) - var(--cap));
+    padding: 0;
+    border: 0;
+    background: var(--grey);
+    cursor: pointer;
+    overflow: hidden;
+  }
+  .small .frame {
+    /* narrower boxes leave room for a caption that wraps to three lines */
+    height: calc((var(--h) - 3.8rem) * 0.72);
+  }
+  .frame:disabled {
+    cursor: default;
+  }
+  .frame:focus-visible {
+    outline: 1px solid var(--yellow);
+    outline-offset: 3px;
+  }
+
+  .frame img {
+    position: absolute;
+    inset: 0;
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    opacity: 0;
+  }
+  .frame img.on {
+    opacity: 1;
+  }
+
+  /* File-listing caption, after a directory index */
+  .cap {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0 0.45em;
+    align-items: baseline;
+    min-height: 0; /* hugs its text; the space below is reserved separately */
+    padding: 0.2rem 0.45rem 0.15rem;
+    background: #e4e2db;
+    color: #1f1e22;
+    font-size: 13px;
+    line-height: 1.2;
+  }
+  /* The caption never widens its box: it takes the photo's width and wraps */
+  .cap {
+    width: 0;
+    min-width: 100%;
+    box-sizing: border-box;
+  }
+  .cap > span,
+  .path > span {
+    overflow-wrap: anywhere;
+  }
+  .path {
+    display: flex;
+    flex-wrap: wrap;
+  }
+  .name,
+  .type {
+    color: var(--red);
+  }
+  .count {
+    margin-left: auto;
+    font-variant-numeric: tabular-nums;
+  }
+
+  /* Signal drawing laid over the images; it stays in place while the strip scrolls */
+  .overlay {
+    position: absolute;
+    top: calc((var(--h) - var(--cap)) * 0.4);
+    left: 50%;
+    width: min(64rem, 82%);
+    transform: translate(-50%, -50%);
+    pointer-events: none;
+    filter: drop-shadow(0 0 1px rgba(20, 19, 22, 0.45));
+  }
+  .overlay img {
+    display: block;
+    width: 100%;
+    height: auto;
+  }
+
+  /* On phones the strip fills the screen down to the footer line. Every box shares
+     that height and keeps its photo's proportions, so wide photos run past the
+     screen edge and are swiped across rather than cropped. */
+  @media (max-width: 820px) {
+    .strip {
+      --reserve: 2.6rem; /* room for a two-line caption under each box */
+    }
+    .track {
+      height: 100%;
+      gap: 1.2rem;
+      padding-bottom: 0.2rem;
+      scroll-snap-type: x proximity;
+    }
+    .box {
+      scroll-snap-align: start;
+    }
+    .frame,
+    .small .frame {
+      height: calc(100cqh - var(--reserve));
+    }
+    .overlay {
+      top: calc((100cqh - var(--reserve)) / 2);
+      width: 92%;
+    }
+    .cap {
+      font-size: 11.5px;
+      padding: 0.15rem 0.35rem 0.1rem;
+    }
+  }
+</style>
