@@ -360,9 +360,15 @@ if (!editorial.length) strip.push(...products);
     height: calc((var(--h) - 3.8rem) * 0.86);
     background: none;
   }
+  /* Every garment sits inside the same square with a margin all round, so wide
+     pieces (tees) and tall pieces (trousers) keep a clear gap from the box edges
+     and from the caption underneath */
   .product .frame img {
+    inset: 5% 7% auto;
+    width: 86%;
+    height: calc(95% - 1.6rem);
     object-fit: contain;
-    object-position: 50% 100%; /* garments stand on their caption */
+    object-position: 50% 100%;
   }
   .frame:disabled {
     cursor: default;
