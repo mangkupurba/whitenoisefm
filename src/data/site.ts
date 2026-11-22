@@ -22,6 +22,11 @@ export const NAV = [
 // The filename is shown as the caption, so name files the way they should read.
 export const HOME_FOLDERS = ['SYNC/MAHIRO-TO', 'STASIS', 'SYNC/ATSUSHI-TO'];
 
+// Product shots (transparent PNGs) that float between the editorial boxes. Each
+// article gets its own box; files of one article are named the same apart from a
+// _FRONT / _BACK ending, and the box shows the front first, then the back.
+export const HOME_PRODUCT_FOLDERS = ['SYNC AW2026'];
+
 // Seconds between automatic image changes in each box (clicking a box also changes it).
 export const HOME_INTERVAL = 4;
 

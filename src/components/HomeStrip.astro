@@ -5,7 +5,7 @@
 // with the file name as caption. The signal drawing sits on top of the strip.
 import { getImage } from 'astro:assets';
 import type { ImageMetadata } from 'astro';
-import { HOME_FOLDERS, HOME_INTERVAL } from '../data/site';
+import { HOME_FOLDERS, HOME_PRODUCT_FOLDERS, HOME_INTERVAL } from '../data/site';
 
 const files = import.meta.glob<{ default: ImageMetadata }>(
   '../../images/**/*.{jpg,jpeg,png,webp,avif,gif,JPG,JPEG,PNG,WEBP}',
@@ -43,8 +43,30 @@ for (const [path, mod] of Object.entries(files)) {
 }
 const folderOrder = [
   ...HOME_FOLDERS.filter((f) => folders.has(f)),
-  ...[...folders.keys()].filter((f) => !HOME_FOLDERS.includes(f)).sort(byName),
+  ...[...folders.keys()]
+    .filter((f) => !HOME_FOLDERS.includes(f) && !HOME_PRODUCT_FOLDERS.includes(f))
+    .sort(byName),
 ];
+
+const toSlide = async ([rel, meta]: [string, ImageMetadata]): Promise<Slide> => {
+  const name = rel.split('/').pop() ?? rel;
+  const ext = name.split('.').pop()?.toLowerCase() ?? '';
+  const img = await getImage({
+    src: meta,
+    widths: [...[640, 1200].filter((w) => w < meta.width), Math.min(meta.width, 1800)],
+    width: Math.min(meta.width, 1800),
+    format: 'webp',
+  });
+  return {
+    src: img.src,
+    srcset: img.srcSet.attribute,
+    width: meta.width,
+    height: meta.height,
+    name,
+    dims: `${meta.width}x${meta.height}`,
+    type: `${TYPE[ext] ?? ext.toUpperCase()} image`,
+  };
+};
 
 const boxes: { dir: string; ratio: number; slides: Slide[] }[] = [];
 for (const folder of folderOrder) {
@@ -62,37 +84,43 @@ for (const folder of folderOrder) {
   groups.sort((a, b) => a.ratio - b.ratio);
 
   for (const group of groups) {
-    const slides = await Promise.all(
-      group.items.map(async ([rel, meta]): Promise<Slide> => {
-        const name = rel.split('/').pop() ?? rel;
-        const ext = name.split('.').pop()?.toLowerCase() ?? '';
-        const img = await getImage({
-          src: meta,
-          widths: [...[640, 1200].filter((w) => w < meta.width), Math.min(meta.width, 1800)],
-          width: Math.min(meta.width, 1800),
-          format: 'webp',
-        });
-        return {
-          src: img.src,
-          srcset: img.srcSet.attribute,
-          width: meta.width,
-          height: meta.height,
-          name,
-          dims: `${meta.width}x${meta.height}`,
-          type: `${TYPE[ext] ?? ext.toUpperCase()} image`,
-        };
-      }),
-    );
+    const slides = await Promise.all(group.items.map(toSlide));
     boxes.push({ dir: folder ? `${folder}/` : '', ratio: group.ratio, slides });
   }
 }
 
-// Alternate large and small boxes along the strip
-const strip = boxes.map((box, i) => ({
+// Product boxes: one per article, front first, then back
+const side = (n: string) => (/_BACK\./i.test(n) ? 1 : /_FRONT\./i.test(n) ? 0 : 0.5);
+const articles = new Map<string, [string, ImageMetadata][]>();
+for (const folder of HOME_PRODUCT_FOLDERS) {
+  for (const entry of folders.get(folder) ?? []) {
+    const key = entry[0].replace(/_(FRONT|BACK)(\.[^.]+)$/i, '$2').replace(/\.[^.]+$/, '');
+    if (!articles.has(key)) articles.set(key, []);
+    articles.get(key)!.push(entry);
+  }
+}
+const products = await Promise.all(
+  [...articles.keys()].sort(byName).map(async (key) => {
+    const items = articles.get(key)!.sort(([a], [b]) => side(a) - side(b) || byName(a, b));
+    return { size: 'product', ar: '1 / 1', slides: await Promise.all(items.map(toSlide)) };
+  }),
+);
+
+// Alternate large and small editorial boxes along the strip, with the product
+// boxes spread evenly between them
+const editorial = boxes.map((box, i) => ({
   ...box,
   size: i % 2 === 0 ? 'large' : 'small',
   ar: `${box.slides[0].width} / ${box.slides[0].height}`,
 }));
+const strip: { size: string; ar: string; slides: Slide[] }[] = [];
+editorial.forEach((box, j) => {
+  strip.push(box);
+  const from = Math.floor((j * products.length) / editorial.length);
+  const to = Math.floor(((j + 1) * products.length) / editorial.length);
+  strip.push(...products.slice(from, to));
+});
+if (!editorial.length) strip.push(...products);
 ---
 
 <div class="strip" data-strip data-interval={HOME_INTERVAL}>
@@ -124,7 +152,7 @@ const strip = boxes.map((box, i) => ({
                 srcset={j === 0 ? s.srcset : undefined}
                 data-src={j === 0 ? undefined : s.src}
                 data-srcset={j === 0 ? undefined : s.srcset}
-                sizes={box.size === 'large' ? '(max-width: 820px) 90vw, 60vw' : '(max-width: 820px) 70vw, 30vw'}
+                sizes={box.size === 'large' ? '(max-width: 820px) 90vw, 60vw' : box.size === 'product' ? '(max-width: 820px) 80vw, 40vw' : '(max-width: 820px) 70vw, 30vw'}
                 width={s.width}
                 height={s.height}
                 alt=""
@@ -326,6 +354,15 @@ const strip = boxes.map((box, i) => ({
   .small .frame {
     /* narrower boxes leave room for a caption that wraps to three lines */
     height: calc((var(--h) - 3.8rem) * 0.72);
+  }
+  /* Product shots float on the page: no backing, the whole garment in view */
+  .product .frame {
+    height: calc((var(--h) - 3.8rem) * 0.86);
+    background: none;
+  }
+  .product .frame img {
+    object-fit: contain;
+    object-position: 50% 100%; /* garments stand on their caption */
   }
   .frame:disabled {
     cursor: default;
